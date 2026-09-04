@@ -72,6 +72,10 @@ go test ./...
 feature the renderer supports; run `go run . testdata/showcase.md` to eyeball
 style changes.
 
+Markdown support is GFM (tables, task lists, strikethrough, autolinks) plus
+definition lists, `:emoji:` shortcodes, and footnotes (renumbered, with a
+**Footnotes** section appended).
+
 Requires Go 1.24+. Rendering is provided by
 [`glamour`](https://github.com/charmbracelet/glamour); the interactive viewport is
 built on [`bubbletea`](https://github.com/charmbracelet/bubbletea).

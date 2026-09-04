@@ -8,7 +8,6 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -139,7 +138,7 @@ func render(markdown string, env renderEnv, width int) (string, error) {
 	if err != nil {
 		return markdown, err
 	}
-	out, err := r.Render(markdown)
+	out, err := r.Render(expandFootnotes(markdown))
 	if err != nil {
 		return markdown, err
 	}
@@ -217,6 +216,7 @@ func fillPanels(rendered string, env renderEnv, wrap int) string {
 		if bg == "" {
 			return ln
 		}
+		ln = strings.ReplaceAll(ln, "\x1b[m", ansiReset) // normalise the bare reset
 		switch w := lipgloss.Width(ln); {
 		case w < wrap:
 			ln += strings.Repeat(" ", wrap-w)
@@ -309,17 +309,6 @@ func stripSentinels(s string) string {
 		b.WriteString("\n")
 	}
 	return strings.TrimSuffix(b.String(), "\n")
-}
-
-// newRenderer builds a glamour renderer with an explicit style and colour
-// profile (never autostyle). The style is a built-in one adapted by
-// readableStyle for full-screen use.
-func newRenderer(env renderEnv, wrap int) (*glamour.TermRenderer, error) {
-	return glamour.NewTermRenderer(
-		glamour.WithStyles(readableStyle(baseStyleConfig(env.style), wrap, env.theme)),
-		glamour.WithColorProfile(env.profile),
-		glamour.WithWordWrap(wrap),
-	)
 }
 
 func (m *model) handleKey(msg tea.KeyMsg) (tea.Cmd, bool) {

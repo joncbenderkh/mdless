@@ -8,9 +8,9 @@ go run . testdata/showcase.md
 go run . --theme mono testdata/showcase.md   # or --list-themes
 ```
 
-Rendering goes through [glamour][g], which parses with goldmark's **GFM** and
-**definition-list** extensions. Features outside that set (footnotes, `:emoji:`
-shortcodes) are listed at the end and are expected to pass through literally.
+Rendering goes through [glamour][g] with goldmark's **GFM**, **definition-list**
+and **emoji** extensions; footnotes are handled by `mdless` itself. See the
+sections near the end.
 
 [g]: https://github.com/charmbracelet/glamour
 
@@ -80,9 +80,7 @@ Nested emphasis: **bold with *italic* and `code` inside**, and
   - Nested one
   - Nested two
     - Deeper still
-- Third item with a wrapped line that is long enough to require the renderer to
-  reflow it across the available width so indentation of the continuation can be
-  checked
+- Third item, one long source line — long enough that the renderer must reflow it across the available width so the wrapped continuation lines up under the text, not the bullet
 
 ### Ordered, with a custom start
 
@@ -204,14 +202,14 @@ generally rendered as plain text.
   Block-level HTML is passed through as-is.
 </div>
 
-## Not enabled by default
+## Footnotes and emoji
 
-These render literally because the corresponding extension is off:
+- Emoji shortcodes render: :tada: :rocket: :warning:
+- A footnote reference[^note] is renumbered, and every definition is collected into a **Footnotes** section at the end of the document.[^2]
 
-- Footnote reference[^1] and its definition below.
-- Emoji shortcode: :tada: :rocket: :warning:
-
-[^1]: This footnote text appears inline rather than as a linked note.
+[^note]: The first footnote. Definitions may wrap onto
+  indented continuation lines like this one.
+[^2]: A second footnote, to show the numbering.
 
 ## Wrapping stress test
 

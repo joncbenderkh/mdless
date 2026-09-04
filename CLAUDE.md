@@ -24,6 +24,8 @@ internal/pager/
   pager.go              Run(); renderEnv + theme resolution before bubbletea
   model.go              bubbletea model: layout, render, key dispatch, views;
                         fillPanels post-processing (code + H1 background)
+  markdown.go           glamour's goldmark+ansi pipeline rebuilt to add emoji
+  footnotes.go          expandFootnotes: [^id] -> [n] + a Footnotes section
   style.go              readableStyle: glamour style + theme -> ansi.StyleConfig
   theme.go              Theme struct; loads themes/*.json (embedded), DumpTheme
   themes/*.json         the built-in themes — same format as a user theme file
