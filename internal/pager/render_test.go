@@ -63,6 +63,31 @@ func TestRenderDropsHeadingMarkers(t *testing.T) {
 	}
 }
 
+// H1 is a full-width banner: wider and heavier than any lower level.
+func TestRenderH1Banner(t *testing.T) {
+	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	const wrap = 58
+	out, err := render("# Title Here\n\nbody\n\n## Section\n\nbody\n", env, wrap+2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var h1 string
+	for _, ln := range strings.Split(out, "\n") {
+		if strings.Contains(stripANSI(ln), "TITLE HERE") { // H1 is upper-cased
+			h1 = ln
+		}
+	}
+	if h1 == "" {
+		t.Fatalf("H1 not found / not upper-cased:\n%s", stripANSI(out))
+	}
+	if lipgloss.Width(h1) != wrap {
+		t.Fatalf("H1 banner not full-width (%d, want %d): %q", lipgloss.Width(h1), wrap, stripANSI(h1))
+	}
+	if !strings.HasPrefix(h1, "\x1b[48;5;63m") {
+		t.Fatalf("H1 missing banner background: %q", h1)
+	}
+}
+
 // H4-H6 must be visually distinct from each other, not just from the body.
 func TestRenderHeadingLevelsDiffer(t *testing.T) {
 	env := renderEnv{style: "dark", profile: termenv.TrueColor}
@@ -203,7 +228,8 @@ func TestRenderShowcase(t *testing.T) {
 			if width >= 40 {
 				for _, ln := range strings.Split(out, "\n") {
 					panel := strings.HasPrefix(ln, "\x1b[48;5;236m") ||
-						strings.HasPrefix(ln, "\x1b[48;5;254m")
+						strings.HasPrefix(ln, "\x1b[48;5;254m") ||
+						strings.HasPrefix(ln, "\x1b[48;5;63m")
 					if panel && lipgloss.Width(ln) > width {
 						t.Fatalf("render(style=%s width=%d): panel line overflows (%d): %q",
 							style, width, lipgloss.Width(ln), stripANSI(ln))

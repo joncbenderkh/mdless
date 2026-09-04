@@ -113,7 +113,7 @@ func render(markdown string, env renderEnv, width int) (string, error) {
 	// renders them 8 wide while our width maths counts them as 1, so a tabbed
 	// line overflows and wraps — showing as spurious blank rows. Expand first.
 	out = expandTabs(out, 4)
-	return strings.TrimRight(fillCodePanels(out, env, wrap), "\n"), nil
+	return strings.TrimRight(fillPanels(out, env, wrap), "\n"), nil
 }
 
 // expandTabs replaces tab characters with spaces to the next tab stop, counting
@@ -154,19 +154,19 @@ func expandTabs(s string, tabWidth int) string {
 
 const ansiReset = "\x1b[0m"
 
-// fillCodePanels turns the sentinel-bracketed code regions (see panelCodeBlock)
-// into a solid background panel: every line between the sentinels gets the panel
-// colour painted edge to edge, re-asserted after each inline reset that
-// glamour's syntax highlighting emits. glamour cannot fill a block background on
-// its own, so an unhighlighted code block would otherwise look like prose.
-func fillCodePanels(rendered string, env renderEnv, wrap int) string {
-	bg := "\x1b[48;5;236m" // dark panel
-	switch env.style {
-	case "light", "pink":
-		bg = "\x1b[48;5;254m"
-	}
+// fillPanels turns the sentinel-bracketed regions (the H1 and every code block,
+// see readableStyle) into solid full-width panels: each line between a sentinel
+// pair gets its background painted edge to edge, re-asserted after every inline
+// reset that glamour's syntax highlighting emits. glamour cannot fill a block
+// background on its own, so an unhighlighted code block would otherwise look
+// like prose and the H1 banner would not stand out.
+func fillPanels(rendered string, env renderEnv, wrap int) string {
 	if !env.colored() {
 		return stripSentinels(rendered) // no colour to paint
+	}
+	codeBG, h1BG := "\x1b[48;5;236m", "\x1b[48;5;63m"
+	if env.style == "light" || env.style == "pink" {
+		codeBG, h1BG = "\x1b[48;5;254m", "\x1b[48;5;62m"
 	}
 
 	isBlank := func(s string) bool { return strings.TrimSpace(stripANSI(s)) == "" }
@@ -178,7 +178,7 @@ func fillCodePanels(rendered string, env renderEnv, wrap int) string {
 			out = append(out, "")
 		}
 	}
-	paint := func(ln string) string {
+	paint := func(ln, bg string) string {
 		switch w := lipgloss.Width(ln); {
 		case w < wrap:
 			ln += strings.Repeat(" ", wrap-w) // pad short lines to the panel edge
@@ -187,25 +187,32 @@ func fillCodePanels(rendered string, env renderEnv, wrap int) string {
 		}
 		return bg + strings.ReplaceAll(ln, ansiReset, ansiReset+bg) + ansiReset
 	}
+	flush := func(lines []string, bg string) {
+		for len(lines) > 0 && isBlank(lines[len(lines)-1]) {
+			lines = lines[:len(lines)-1] // drop trailing blank lines in the panel
+		}
+		for _, l := range lines {
+			out = append(out, paint(l, bg))
+		}
+	}
 
-	var code []string
-	inCode := false
+	var panel []string
+	var panelBG string
+	inPanel := false
 	for _, ln := range strings.Split(rendered, "\n") {
 		switch {
 		case strings.Contains(ln, codeOpen):
-			inCode, code = true, code[:0]
+			inPanel, panelBG, panel = true, codeBG, panel[:0]
 			edge()
-		case strings.Contains(ln, codeClose):
-			inCode = false
-			for len(code) > 0 && isBlank(code[len(code)-1]) {
-				code = code[:len(code)-1] // trim trailing blank code lines
-			}
-			for _, c := range code {
-				out = append(out, paint(c))
-			}
+		case strings.Contains(ln, h1Open):
+			inPanel, panelBG, panel = true, h1BG, panel[:0]
 			edge()
-		case inCode:
-			code = append(code, ln)
+		case strings.Contains(ln, codeClose), strings.Contains(ln, h1Close):
+			inPanel = false
+			flush(panel, panelBG)
+			edge()
+		case inPanel:
+			panel = append(panel, ln)
 		case isBlank(ln):
 			edge() // collapse blank runs outside panels
 		default:

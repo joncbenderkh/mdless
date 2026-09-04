@@ -11,13 +11,16 @@ func boolPtr(b bool) *bool    { return &b }
 func strPtr(s string) *string { return &s }
 func uintPtr(u uint) *uint    { return &u }
 
-// Sentinels wrapped around every code block via its BlockPrefix/BlockSuffix.
-// fillCodePanels finds the lines between them and paints the panel background;
-// glamour cannot fill a block background itself. They use NUL so they can never
-// collide with document text and are trivially stripped if one leaks.
+// Sentinels wrapped around the H1 and code blocks via their
+// BlockPrefix/BlockSuffix. fillPanels finds the lines between a pair and paints
+// a full-width background behind them; glamour cannot fill a block background
+// itself. They use NUL so they can never collide with document text and are
+// trivially stripped if one leaks. Every pair shares the "\x00mdless:" prefix.
 const (
 	codeOpen  = "\x00mdless:code\x00"
 	codeClose = "\x00mdless:/code\x00"
+	h1Open    = "\x00mdless:h1\x00"
+	h1Close   = "\x00mdless:/h1\x00"
 )
 
 // baseStyleConfig returns the built-in glamour style named by name, or the dark
@@ -44,39 +47,51 @@ const (
 // pager that reads as clutter, and a heading like "### 1. Foo" is
 // indistinguishable from an ordered-list item.
 //
-// This keeps the H1 banner, replaces the markers with a coloured gutter bar,
-// adds a blank line above every heading, upper-cases H2 so top-level sections
-// stand apart, and fades H4-H6.
+// The hierarchy is a strict fade from H1 down: a full-width banner, then
+// bold-accent, accent, and three progressively dimmer plain levels. Markers are
+// a coloured gutter bar (never "## ", which reads as list markup) and every
+// heading gets a blank line above it.
 func readableStyle(base ansi.StyleConfig) ansi.StyleConfig {
 	s := base
 
 	s.Heading.BlockPrefix = "\n"
 
+	// H1 — full-width banner (filled by fillPanels), bold and upper-cased.
+	s.H1 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
+		BlockPrefix: h1Open + "\n",
+		BlockSuffix: "\n" + h1Close,
+		Prefix:      "  ",
+		Color:       strPtr("231"),
+		Bold:        boolPtr(true),
+		Upper:       boolPtr(true),
+	}}
+	// H2 — bold, upper-cased, accent colour, gutter bar.
 	s.H2 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
 		Prefix: majorGutter,
 		Bold:   boolPtr(true),
 		Upper:  boolPtr(true),
 	}}
+	// H3 — accent colour, gutter bar, regular weight and case.
 	s.H3 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
 		Prefix: majorGutter,
 		Bold:   boolPtr(false),
 	}}
-	// H4-H6 are rare; distinguish them by indenting the gutter one step per
-	// level and layering on italic, then faint.
+	// H4-H6 — no accent, same thin gutter, fading out by colour then italic.
 	s.H4 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
 		Prefix: minorGutter,
 		Bold:   boolPtr(false),
+		Color:  strPtr("250"),
 	}}
 	s.H5 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
-		Prefix: "  " + minorGutter,
+		Prefix: minorGutter,
 		Bold:   boolPtr(false),
-		Italic: boolPtr(true),
+		Color:  strPtr("244"),
 	}}
 	s.H6 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
-		Prefix: "    " + minorGutter,
+		Prefix: minorGutter,
 		Bold:   boolPtr(false),
+		Color:  strPtr("244"),
 		Italic: boolPtr(true),
-		Faint:  boolPtr(true),
 	}}
 
 	s.CodeBlock = panelCodeBlock(s.CodeBlock)
