@@ -7,7 +7,18 @@ import (
 	"github.com/charmbracelet/glamour/styles"
 )
 
-func boolPtr(b bool) *bool { return &b }
+func boolPtr(b bool) *bool    { return &b }
+func strPtr(s string) *string { return &s }
+func uintPtr(u uint) *uint    { return &u }
+
+// Sentinels wrapped around every code block via its BlockPrefix/BlockSuffix.
+// fillCodePanels finds the lines between them and paints the panel background;
+// glamour cannot fill a block background itself. They use NUL so they can never
+// collide with document text and are trivially stripped if one leaks.
+const (
+	codeOpen  = "\x00mdless:code\x00"
+	codeClose = "\x00mdless:/code\x00"
+)
 
 // baseStyleConfig returns the built-in glamour style named by name, or the dark
 // style when the name is unknown.
@@ -68,5 +79,18 @@ func readableStyle(base ansi.StyleConfig) ansi.StyleConfig {
 		Faint:  boolPtr(true),
 	}}
 
+	s.CodeBlock = panelCodeBlock(s.CodeBlock)
+
 	return s
+}
+
+// panelCodeBlock brackets code blocks with the panel sentinels and gives the
+// text a slightly brighter foreground. The background fill and the blank lines
+// around it are applied afterwards by fillCodePanels.
+func panelCodeBlock(cb ansi.StyleCodeBlock) ansi.StyleCodeBlock {
+	cb.StylePrimitive.Color = strPtr("252")
+	cb.StylePrimitive.BlockPrefix = codeOpen + "\n"
+	cb.StylePrimitive.BlockSuffix = "\n" + codeClose
+	cb.Margin = uintPtr(1)
+	return cb
 }

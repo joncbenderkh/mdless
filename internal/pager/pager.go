@@ -22,6 +22,9 @@ type renderEnv struct {
 	profile termenv.Profile
 }
 
+// colored reports whether the terminal can render colour at all.
+func (e renderEnv) colored() bool { return e.profile != termenv.Ascii }
+
 func detectEnv() renderEnv {
 	style := os.Getenv("GLAMOUR_STYLE")
 	if style == "" {

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
 )
 
@@ -88,6 +89,50 @@ func TestRenderHeadingLevelsDiffer(t *testing.T) {
 	if norm(lines["4"]) == norm(lines["5"]) || norm(lines["5"]) == norm(lines["6"]) {
 		t.Fatalf("H4-H6 not distinguishable:\n4:%q\n5:%q\n6:%q",
 			norm(lines["4"]), norm(lines["5"]), norm(lines["6"]))
+	}
+}
+
+// Code blocks become a solid, full-width background panel; inline code inside a
+// paragraph must not trigger the panel treatment.
+func TestRenderCodePanels(t *testing.T) {
+	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	const wrap = 48
+	md := "A paragraph with `inline code` that should stay prose and wrap " +
+		"naturally without being widened into a panel at all.\n\n" +
+		"```\nplain block line\n```\n\n```go\nfunc x() {}\n```\n"
+
+	out, err := render(md, env, wrap+2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "\x00mdless") {
+		t.Fatalf("sentinel leaked into output:\n%q", out)
+	}
+
+	var codeLines, proseInlineCode int
+	for _, ln := range strings.Split(out, "\n") {
+		plain := stripANSI(ln)
+		switch {
+		case strings.Contains(plain, "plain block line"), strings.Contains(plain, "func x()"):
+			codeLines++
+			if lipgloss.Width(ln) != wrap {
+				t.Fatalf("code line not padded to wrap %d (got %d): %q", wrap, lipgloss.Width(ln), plain)
+			}
+			if !strings.HasPrefix(ln, "\x1b[48;5;236m") {
+				t.Fatalf("code line missing panel background: %q", ln)
+			}
+		case strings.Contains(plain, "inline code"):
+			proseInlineCode++
+			if lipgloss.Width(ln) >= wrap {
+				t.Fatalf("prose line with inline code was widened to a panel: %q", plain)
+			}
+		}
+	}
+	if codeLines != 2 {
+		t.Fatalf("expected 2 painted code lines, saw %d", codeLines)
+	}
+	if proseInlineCode == 0 {
+		t.Fatal("did not find the inline-code prose line")
 	}
 }
 

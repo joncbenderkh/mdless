@@ -109,7 +109,80 @@ func render(markdown string, env renderEnv, width int) (string, error) {
 	if err != nil {
 		return markdown, err
 	}
-	return strings.TrimRight(out, "\n"), nil
+	return strings.TrimRight(fillCodePanels(out, env, wrap), "\n"), nil
+}
+
+const ansiReset = "\x1b[0m"
+
+// fillCodePanels turns the sentinel-bracketed code regions (see panelCodeBlock)
+// into a solid background panel: every line between the sentinels gets the panel
+// colour painted edge to edge, re-asserted after each inline reset that
+// glamour's syntax highlighting emits. glamour cannot fill a block background on
+// its own, so an unhighlighted code block would otherwise look like prose.
+func fillCodePanels(rendered string, env renderEnv, wrap int) string {
+	bg := "\x1b[48;5;236m" // dark panel
+	switch env.style {
+	case "light", "pink":
+		bg = "\x1b[48;5;254m"
+	}
+	if !env.colored() {
+		return stripSentinels(rendered) // no colour to paint
+	}
+
+	isBlank := func(s string) bool { return strings.TrimSpace(stripANSI(s)) == "" }
+
+	var out []string
+	blankTail := func() bool { return len(out) == 0 || isBlank(out[len(out)-1]) }
+	edge := func() {
+		if !blankTail() {
+			out = append(out, "")
+		}
+	}
+	paint := func(ln string) string {
+		body := strings.ReplaceAll(ln, ansiReset, ansiReset+bg)
+		if gap := wrap - lipgloss.Width(ln); gap > 0 {
+			body += bg + strings.Repeat(" ", gap)
+		}
+		return bg + body + ansiReset
+	}
+
+	var code []string
+	inCode := false
+	for _, ln := range strings.Split(rendered, "\n") {
+		switch {
+		case strings.Contains(ln, codeOpen):
+			inCode, code = true, code[:0]
+			edge()
+		case strings.Contains(ln, codeClose):
+			inCode = false
+			for len(code) > 0 && isBlank(code[len(code)-1]) {
+				code = code[:len(code)-1] // trim trailing blank code lines
+			}
+			for _, c := range code {
+				out = append(out, paint(c))
+			}
+			edge()
+		case inCode:
+			code = append(code, ln)
+		case isBlank(ln):
+			edge() // collapse blank runs outside panels
+		default:
+			out = append(out, ln)
+		}
+	}
+	return strings.TrimRight(strings.Join(out, "\n"), "\n")
+}
+
+func stripSentinels(s string) string {
+	var b strings.Builder
+	for _, ln := range strings.Split(s, "\n") {
+		if strings.Contains(ln, "\x00mdless:") {
+			continue
+		}
+		b.WriteString(ln)
+		b.WriteString("\n")
+	}
+	return strings.TrimSuffix(b.String(), "\n")
 }
 
 // newRenderer builds a glamour renderer with an explicit style and colour

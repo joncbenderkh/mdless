@@ -21,10 +21,13 @@ viewport with scroll/page/search keybindings.
 ```
 main.go                 CLI entry: flag/arg parsing, stdin vs file input
 internal/pager/
-  pager.go              Run() — constructs and runs the bubbletea program
-  model.go              bubbletea model: layout, render, key dispatch, views
+  pager.go              Run(); renderEnv detection before bubbletea starts
+  model.go              bubbletea model: layout, render, key dispatch, views;
+                        fillCodePanels post-processing
+  style.go              readableStyle: glamour style adapted for a full screen
   search.go             `/` search: ANSI stripping, match indexing, scroll-to
-  search_test.go        unit tests for the pure helpers
+  *_test.go             unit tests for the pure helpers
+testdata/showcase.md    every supported Markdown feature, for eyeballing
 ```
 
 ## Commands
