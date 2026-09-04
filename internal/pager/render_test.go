@@ -62,6 +62,35 @@ func TestRenderDropsHeadingMarkers(t *testing.T) {
 	}
 }
 
+// H4-H6 must be visually distinct from each other, not just from the body.
+func TestRenderHeadingLevelsDiffer(t *testing.T) {
+	env := renderEnv{style: "dark", profile: termenv.TrueColor}
+	md := "#### Four\n\n##### Five\n\n###### Six\n"
+	out, err := render(md, env, 80)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := map[string]string{}
+	for _, l := range strings.Split(out, "\n") {
+		switch {
+		case strings.Contains(stripANSI(l), "Four"):
+			lines["4"] = l
+		case strings.Contains(stripANSI(l), "Five"):
+			lines["5"] = l
+		case strings.Contains(stripANSI(l), "Six"):
+			lines["6"] = l
+		}
+	}
+	if lines["4"] == "" || lines["5"] == "" || lines["6"] == "" {
+		t.Fatalf("missing a heading line: %#v", lines)
+	}
+	norm := func(s string) string { return strings.TrimRight(stripANSI(s), " ") }
+	if norm(lines["4"]) == norm(lines["5"]) || norm(lines["5"]) == norm(lines["6"]) {
+		t.Fatalf("H4-H6 not distinguishable:\n4:%q\n5:%q\n6:%q",
+			norm(lines["4"]), norm(lines["5"]), norm(lines["6"]))
+	}
+}
+
 // The showcase document must render cleanly at any width — it is the manual
 // regression fixture for style changes, so a parser or style panic here should
 // fail the build.

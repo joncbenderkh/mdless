@@ -50,14 +50,19 @@ func readableStyle(base ansi.StyleConfig) ansi.StyleConfig {
 		Prefix: majorGutter,
 		Bold:   boolPtr(false),
 	}}
+	// H4-H6 are rare; distinguish them by indenting the gutter one step per
+	// level and layering on italic, then faint.
 	s.H4 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
 		Prefix: minorGutter,
 		Bold:   boolPtr(false),
+	}}
+	s.H5 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
+		Prefix: "  " + minorGutter,
+		Bold:   boolPtr(false),
 		Italic: boolPtr(true),
 	}}
-	s.H5 = s.H4
 	s.H6 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
-		Prefix: minorGutter,
+		Prefix: "    " + minorGutter,
 		Bold:   boolPtr(false),
 		Italic: boolPtr(true),
 		Faint:  boolPtr(true),
