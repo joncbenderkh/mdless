@@ -12,11 +12,17 @@ import (
 	"github.com/muesli/termenv"
 )
 
+// testEnv builds a renderEnv the way tests want it: the default theme, an
+// explicit style and colour profile, bypassing terminal detection.
+func testEnv(style string, profile termenv.Profile) renderEnv {
+	return renderEnv{style: style, profile: profile, theme: defaultTheme}
+}
+
 // With an explicit style and colour profile, headers must come back styled
 // (ANSI escapes present) rather than as literal "#" text — the regression that
 // autostyle-under-bubbletea caused.
 func TestRenderStylesHeaders(t *testing.T) {
-	env := renderEnv{style: "dark", profile: termenv.TrueColor}
+	env := testEnv("dark", termenv.TrueColor)
 	out, err := render("# Big Header\n\nbody text\n", env, 80)
 	if err != nil {
 		t.Fatal(err)
@@ -30,7 +36,7 @@ func TestRenderStylesHeaders(t *testing.T) {
 }
 
 func TestRenderUnknownStyleFallsBack(t *testing.T) {
-	env := renderEnv{style: "no-such-style", profile: termenv.TrueColor}
+	env := testEnv("no-such-style", termenv.TrueColor)
 	out, err := render("# Heading\n", env, 80)
 	if err != nil {
 		t.Fatalf("unknown style should fall back, not error: %v", err)
@@ -43,7 +49,7 @@ func TestRenderUnknownStyleFallsBack(t *testing.T) {
 // readableStyle drops glamour's literal "## " / "### " heading markers and
 // replaces them with a gutter bar so a heading never reads as list markup.
 func TestRenderDropsHeadingMarkers(t *testing.T) {
-	env := renderEnv{style: "dark", profile: termenv.TrueColor}
+	env := testEnv("dark", termenv.TrueColor)
 	md := "## Second Level\n\ntext\n\n### 3. Third Level\n\nmore\n"
 	out, err := render(md, env, 80)
 	if err != nil {
@@ -56,19 +62,19 @@ func TestRenderDropsHeadingMarkers(t *testing.T) {
 		}
 	}
 	// H2: major gutter + upper-case. H3: the narrower gutter, mixed case.
-	if !strings.Contains(plain, majorGutter+"SECOND LEVEL") {
-		t.Fatalf("H2 not rendered as %q...:\n%s", majorGutter, plain)
+	if !strings.Contains(plain, defaultTheme.Headings[1].Gutter+"SECOND LEVEL") {
+		t.Fatalf("H2 not rendered as %q...:\n%s", defaultTheme.Headings[1].Gutter, plain)
 	}
-	if !strings.Contains(plain, midGutter+"3. Third Level") {
-		t.Fatalf("H3 not rendered as %q...:\n%s", midGutter, plain)
+	if !strings.Contains(plain, defaultTheme.Headings[2].Gutter+"3. Third Level") {
+		t.Fatalf("H3 not rendered as %q...:\n%s", defaultTheme.Headings[2].Gutter, plain)
 	}
 }
 
 // H1 is a full-width banner: wider and heavier than any lower level.
 func TestRenderH1Banner(t *testing.T) {
-	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	env := testEnv("dark", termenv.ANSI256)
 	const width = 60
-	wrap := contentWrap(width)
+	wrap := contentWrap(width, 0)
 	out, err := render("# Title Here\n\nbody\n\n## Section\n\nbody\n", env, width)
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +98,7 @@ func TestRenderH1Banner(t *testing.T) {
 
 // H2 and H3 must not read as near-identical: H2 is bold + underlined, H3 is not.
 func TestRenderH2H3Distinct(t *testing.T) {
-	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	env := testEnv("dark", termenv.ANSI256)
 	out, err := render("## Section Two\n\nbody\n\n### Section Three\n\nbody\n", env, 80)
 	if err != nil {
 		t.Fatal(err)
@@ -127,14 +133,14 @@ func TestRenderH2H3Distinct(t *testing.T) {
 	if hasAttr(h3, "1") || hasAttr(h3, "4") {
 		t.Fatalf("H3 should be neither bold nor underlined: %q", h3)
 	}
-	if !strings.Contains(stripANSI(h3), midGutter) {
-		t.Fatalf("H3 should use the narrower gutter %q: %q", midGutter, stripANSI(h3))
+	if !strings.Contains(stripANSI(h3), defaultTheme.Headings[2].Gutter) {
+		t.Fatalf("H3 should use the narrower gutter %q: %q", defaultTheme.Headings[2].Gutter, stripANSI(h3))
 	}
 }
 
 // H4-H6 must be visually distinct from each other, not just from the body.
 func TestRenderHeadingLevelsDiffer(t *testing.T) {
-	env := renderEnv{style: "dark", profile: termenv.TrueColor}
+	env := testEnv("dark", termenv.TrueColor)
 	md := "#### Four\n\n##### Five\n\n###### Six\n"
 	out, err := render(md, env, 80)
 	if err != nil {
@@ -164,9 +170,9 @@ func TestRenderHeadingLevelsDiffer(t *testing.T) {
 // Code blocks become a solid, full-width background panel; inline code inside a
 // paragraph must not trigger the panel treatment.
 func TestRenderCodePanels(t *testing.T) {
-	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	env := testEnv("dark", termenv.ANSI256)
 	const width = 50
-	wrap := contentWrap(width)
+	wrap := contentWrap(width, 0)
 	md := "A paragraph with `inline code` that should stay prose and wrap " +
 		"naturally without being widened into a panel at all.\n\n" +
 		"```\nplain block line\n```\n\n```go\nfunc x() {}\n```\n"
@@ -209,7 +215,7 @@ func TestRenderCodePanels(t *testing.T) {
 // A wrap width that is a multiple of three keeps glamour's reflow from wasting
 // columns and orphaning a word onto its own line.
 func TestContentWrapAvoidsOrphans(t *testing.T) {
-	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	env := testEnv("dark", termenv.ANSI256)
 	// A paragraph whose natural break lands mid-phrase at several widths.
 	md := "The lines below fade from a bold upper-case accent at H2 all the " +
 		"way down to plain dim grey at H6, one gutter bar for every level.\n"
@@ -223,6 +229,22 @@ func TestContentWrapAvoidsOrphans(t *testing.T) {
 			if len(words) == 1 && !strings.HasPrefix(words[0], "─") {
 				t.Errorf("width %d: orphaned word %q", width, words[0])
 			}
+		}
+	}
+}
+
+func TestContentWrapCap(t *testing.T) {
+	cases := []struct{ term, max, want int }{
+		{120, 72, 72}, // capped, 72 is already a multiple of 3
+		{100, 72, 72}, // capped
+		{60, 72, 60},  // terminal narrower than the cap
+		{200, 0, 198}, // uncapped: rounds 200 down to a multiple of 3
+		{10, 72, 21},  // floor
+		{80, 100, 78}, // cap wider than the terminal → terminal wins, rounded
+	}
+	for _, c := range cases {
+		if got := contentWrap(c.term, c.max); got != c.want {
+			t.Errorf("contentWrap(%d, %d) = %d, want %d", c.term, c.max, got, c.want)
 		}
 	}
 }
@@ -246,7 +268,7 @@ func TestExpandTabs(t *testing.T) {
 // A code block indented with tabs must not gain blank rows: unexpanded tabs
 // overflow the width maths and wrap in the viewport.
 func TestRenderTabbedCodeNoBlankRows(t *testing.T) {
-	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	env := testEnv("dark", termenv.ANSI256)
 	md := "```go\nfunc f() {\n\ta := 1\n\tb := 2\n\treturn a + b\n}\n```\n"
 	out, err := render(md, env, 60)
 	if err != nil {
@@ -279,7 +301,7 @@ func TestRenderShowcase(t *testing.T) {
 	}
 	for _, style := range []string{"dark", "light", "notty"} {
 		for _, width := range []int{20, 40, 80, 200} {
-			env := renderEnv{style: style, profile: termenv.TrueColor}
+			env := testEnv(style, termenv.TrueColor)
 			out, err := render(string(src), env, width)
 			if err != nil {
 				t.Fatalf("render(style=%s width=%d): %v", style, width, err)

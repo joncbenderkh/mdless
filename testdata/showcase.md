@@ -5,6 +5,7 @@ style changes can be eyeballed in one pass:
 
 ```sh
 go run . testdata/showcase.md
+go run . --theme mono testdata/showcase.md   # or --list-themes
 ```
 
 Rendering goes through [glamour][g], which parses with goldmark's **GFM** and

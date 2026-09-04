@@ -25,6 +25,40 @@ click-drag selection (copy/paste) keeps working, and the wheel still
 scrolls in terminals that map it to arrow keys under the alternate
 screen. Press `m` to give the mouse to the pager instead.
 
+## Width
+
+Text wraps at **72 columns** by default — a long measure is tiring to
+read. Override with `--width N` (or `$MDLESS_WIDTH`); `--width 0` uses the
+full terminal width.
+
+## Themes
+
+`mdless` picks a theme from `--theme`, else `$MDLESS_THEME`, else the
+terminal background. Built-ins:
+
+| Name | |
+| --- | --- |
+| `default` | the standard dark look |
+| `light` | for light terminals (also the auto-pick on a light background) |
+| `mono` | greyscale, no colour reliance |
+
+```
+mdless --list-themes
+mdless --theme mono README.md
+```
+
+A theme is a small JSON document controlling the heading colours and
+gutter glyphs, the horizontal-rule and H1-underline characters, and the
+code-panel colours. Start from a built-in and edit:
+
+```
+mdless --dump-theme default > ~/.config/mdless/mine.json
+mdless --theme ~/.config/mdless/mine.json README.md
+```
+
+Scalar fields left out of a theme file inherit the default's value; if a
+file includes the `headings` array it must list all six levels.
+
 ## Build
 
 ```

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/joncbenderkh/mdless/internal/pager"
 )
@@ -23,8 +25,12 @@ Usage:
   some-command | mdless
 
 Options:
-  -h, --help       show this help and exit
-  -v, --version    print version and exit
+  -h, --help           show this help and exit
+  -v, --version        print version and exit
+      --width N        wrap text at N columns (default 72; 0 = terminal width)
+      --theme NAME     theme: a built-in name or a path to a .json theme
+      --list-themes    list the built-in themes and exit
+      --dump-theme N   print theme N as JSON (a starting point for your own)
 
 Keys:
   j / k, ↓ / ↑     scroll one line          space / b   page down / up
@@ -35,6 +41,9 @@ Keys:
 The mouse is not captured by default, so terminal click-drag selection
 (copy/paste) keeps working; the wheel still scrolls in most terminals.
 Press m to hand the mouse to the pager instead.
+
+The theme is taken from --theme, else $MDLESS_THEME, else the terminal
+background. Write a custom one with:  mdless --dump-theme default > my.json
 `
 
 func main() {
@@ -45,19 +54,66 @@ func main() {
 }
 
 func run(args []string) error {
-	var path string
-	for _, a := range args {
-		switch a {
-		case "-h", "--help":
+	var path, theme string
+	width := pager.DefaultMaxWidth
+	if v := os.Getenv("MDLESS_WIDTH"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("MDLESS_WIDTH: %w", err)
+		}
+		width = n
+	}
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		next := func() (string, error) {
+			if i+1 >= len(args) {
+				return "", fmt.Errorf("%s needs a value", a)
+			}
+			i++
+			return args[i], nil
+		}
+		switch {
+		case a == "-h" || a == "--help":
 			fmt.Print(usage)
 			return nil
-		case "-v", "--version":
+		case a == "-v" || a == "--version":
 			fmt.Println("mdless", version)
 			return nil
-		default:
-			if len(a) > 0 && a[0] == '-' {
-				return fmt.Errorf("unknown option %q (try --help)", a)
+		case a == "--list-themes":
+			for _, n := range pager.ThemeNames() {
+				fmt.Println(n)
 			}
+			return nil
+		case a == "--dump-theme":
+			name, err := next()
+			if err != nil {
+				return err
+			}
+			return pager.DumpTheme(os.Stdout, name)
+		case a == "--theme":
+			v, err := next()
+			if err != nil {
+				return err
+			}
+			theme = v
+		case strings.HasPrefix(a, "--theme="):
+			theme = strings.TrimPrefix(a, "--theme=")
+		case a == "--width", strings.HasPrefix(a, "--width="):
+			v := strings.TrimPrefix(a, "--width=")
+			if a == "--width" {
+				var err error
+				if v, err = next(); err != nil {
+					return err
+				}
+			}
+			n, err := strconv.Atoi(v)
+			if err != nil || n < 0 {
+				return fmt.Errorf("--width needs a non-negative integer, got %q", v)
+			}
+			width = n
+		case len(a) > 0 && a[0] == '-':
+			return fmt.Errorf("unknown option %q (try --help)", a)
+		default:
 			path = a
 		}
 	}
@@ -66,7 +122,7 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	return pager.Run(string(src), title)
+	return pager.Run(string(src), title, pager.Options{Theme: theme, MaxWidth: width})
 }
 
 func readInput(path string) (data []byte, title string, err error) {

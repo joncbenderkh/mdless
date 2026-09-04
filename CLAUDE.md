@@ -19,12 +19,13 @@ viewport with scroll/page/search keybindings.
 ## Layout
 
 ```
-main.go                 CLI entry: flag/arg parsing, stdin vs file input
+main.go                 CLI entry: flag/arg parsing (--theme, --dump-theme …)
 internal/pager/
-  pager.go              Run(); renderEnv detection before bubbletea starts
+  pager.go              Run(); renderEnv + theme resolution before bubbletea
   model.go              bubbletea model: layout, render, key dispatch, views;
-                        fillCodePanels post-processing
-  style.go              readableStyle: glamour style adapted for a full screen
+                        fillPanels post-processing (code + H1 background)
+  style.go              readableStyle: glamour style + theme -> ansi.StyleConfig
+  theme.go              Theme struct, built-in themes, JSON load, DumpTheme
   search.go             `/` search: ANSI stripping, match indexing, scroll-to
   *_test.go             unit tests for the pure helpers
 testdata/showcase.md    every supported Markdown feature, for eyeballing
@@ -45,3 +46,6 @@ gofmt -l .              # list unformatted files (should be empty)
   `pager.go` / the `Update`/`View` methods.
 - New keybindings go in `model.handleKey`; document them in `README.md` and the
   `usage` string in `main.go`.
+- All colours and glyphs live in `theme.go`'s `Theme`; the `default` theme must
+  stay pixel-identical to the current look. Don't hard-code a colour in
+  `style.go` / `model.go` — add a `Theme` field.

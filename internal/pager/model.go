@@ -96,11 +96,15 @@ func (m *model) resize(width, height int) {
 	m.ready = true
 }
 
-// contentWrap is the wrap width handed to glamour. Its reflow only ever uses a
-// width that is a multiple of three (minus its own two-column margin); a
-// non-multiple wastes up to two columns and drops the odd word onto a line of
-// its own. Rounding down to a multiple of three makes it wrap to the full width.
-func contentWrap(width int) int {
+// contentWrap is the wrap width handed to glamour: the terminal width, capped at
+// env.maxWidth (a long measure is tiring to read) and rounded down to a multiple
+// of three. glamour's reflow only ever uses a multiple of three (after its own
+// two-column margin); other values waste up to two columns and orphan the odd
+// word onto a line of its own.
+func contentWrap(width, maxWidth int) int {
+	if maxWidth > 0 && maxWidth < width {
+		width = maxWidth
+	}
 	wrap := width - width%3
 	if wrap < 21 {
 		wrap = 21
@@ -109,7 +113,7 @@ func contentWrap(width int) int {
 }
 
 func render(markdown string, env renderEnv, width int) (string, error) {
-	wrap := contentWrap(width)
+	wrap := contentWrap(width, env.maxWidth)
 	r, err := newRenderer(env, wrap)
 	if err != nil {
 		return markdown, err
@@ -173,10 +177,15 @@ func fillPanels(rendered string, env renderEnv, wrap int) string {
 	if !env.colored() {
 		return stripSentinels(rendered) // no colour to paint
 	}
-	codeBG, h1BG := "\x1b[48;5;236m", "\x1b[48;5;63m"
-	if env.style == "light" || env.style == "pink" {
-		codeBG, h1BG = "\x1b[48;5;254m", "\x1b[48;5;62m"
+	th := env.theme
+	sgr := func(c string, bg bool) string {
+		if c == "" {
+			return ""
+		}
+		return "\x1b[" + env.profile.Color(c).Sequence(bg) + "m"
 	}
+	codeBG := sgr(th.CodeBG, true)
+	h1BG := sgr(th.Headings[0].BG, true)
 
 	isBlank := func(s string) bool { return strings.TrimSpace(stripANSI(s)) == "" }
 
@@ -208,7 +217,7 @@ func fillPanels(rendered string, env renderEnv, wrap int) string {
 	// A heavy full-width rule under the H1 banner — the one thing no other
 	// heading level carries, so the document title is unmistakable even where
 	// the banner's background colour renders faintly.
-	h1Rule := "\x1b[38;5;63m" + strings.Repeat("━", wrap) + ansiReset
+	h1Rule := sgr(th.H1RuleColor, false) + strings.Repeat(firstRune(th.H1RuleChar, "━"), wrap) + ansiReset
 
 	var panel []string
 	var panelBG string
@@ -279,7 +288,7 @@ func stripSentinels(s string) string {
 // readableStyle for full-screen use.
 func newRenderer(env renderEnv, wrap int) (*glamour.TermRenderer, error) {
 	return glamour.NewTermRenderer(
-		glamour.WithStyles(readableStyle(baseStyleConfig(env.style), wrap)),
+		glamour.WithStyles(readableStyle(baseStyleConfig(env.style), wrap, env.theme)),
 		glamour.WithColorProfile(env.profile),
 		glamour.WithWordWrap(wrap),
 	)
