@@ -37,23 +37,26 @@ func TestRenderUnknownStyleFallsBack(t *testing.T) {
 	}
 }
 
-// readableStyle drops glamour's literal "## " / "### " heading markers.
+// readableStyle drops glamour's literal "## " / "### " heading markers and
+// replaces them with a gutter bar so a heading never reads as list markup.
 func TestRenderDropsHeadingMarkers(t *testing.T) {
 	env := renderEnv{style: "dark", profile: termenv.TrueColor}
-	md := "## Second Level\n\ntext\n\n### Third Level\n\nmore\n"
+	md := "## Second Level\n\ntext\n\n### 3. Third Level\n\nmore\n"
 	out, err := render(md, env, 80)
 	if err != nil {
 		t.Fatal(err)
 	}
 	plain := stripANSI(out)
-	for _, marker := range []string{"## Second", "### Third", "# "} {
+	for _, marker := range []string{"## Second", "### 3.", "# "} {
 		if strings.Contains(plain, marker) {
 			t.Fatalf("heading marker %q still present:\n%s", marker, plain)
 		}
 	}
-	for _, word := range []string{"Second Level", "Third Level"} {
-		if !strings.Contains(plain, word) {
-			t.Fatalf("heading text %q missing:\n%s", word, plain)
-		}
+	// H2 gutter + upper-case, H3 gutter.
+	if !strings.Contains(plain, majorGutter+"SECOND LEVEL") {
+		t.Fatalf("H2 not rendered as %q...:\n%s", majorGutter, plain)
+	}
+	if !strings.Contains(plain, majorGutter+"3. Third Level") {
+		t.Fatalf("H3 not rendered as %q...:\n%s", majorGutter, plain)
 	}
 }
