@@ -205,20 +205,28 @@ func fillPanels(rendered string, env renderEnv, wrap int) string {
 		}
 	}
 
+	// A heavy full-width rule under the H1 banner — the one thing no other
+	// heading level carries, so the document title is unmistakable even where
+	// the banner's background colour renders faintly.
+	h1Rule := "\x1b[38;5;63m" + strings.Repeat("━", wrap) + ansiReset
+
 	var panel []string
 	var panelBG string
-	inPanel := false
+	inPanel, inH1 := false, false
 	for _, ln := range strings.Split(rendered, "\n") {
 		switch {
 		case strings.Contains(ln, codeOpen):
-			inPanel, panelBG, panel = true, codeBG, panel[:0]
+			inPanel, inH1, panelBG, panel = true, false, codeBG, panel[:0]
 			edge()
 		case strings.Contains(ln, h1Open):
-			inPanel, panelBG, panel = true, h1BG, panel[:0]
+			inPanel, inH1, panelBG, panel = true, true, h1BG, panel[:0]
 			edge()
 		case strings.Contains(ln, codeClose), strings.Contains(ln, h1Close):
 			inPanel = false
 			flush(panel, panelBG)
+			if inH1 {
+				out = append(out, h1Rule)
+			}
 			edge()
 		case inPanel:
 			panel = append(panel, ln)

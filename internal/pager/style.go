@@ -60,7 +60,15 @@ func readableStyle(base ansi.StyleConfig, wrap int) ansi.StyleConfig {
 
 	// A rule that spans the page reads as a divider; glamour's default eight
 	// dashes read as stray text.
-	s.HorizontalRule.Format = "\n" + strings.Repeat("─", wrap) + "\n"
+	// glamour indents the rule by its two-column margin, so size it to wrap-2.
+	s.HorizontalRule.Format = "\n" + strings.Repeat("─", wrap-2) + "\n"
+
+	// glamour pads inline code with a literal space inside the styled span. Those
+	// spaces make reflow treat the whole span as one unbreakable token, which
+	// orphans it (or its neighbour) onto a line of its own. Drop the padding; the
+	// background alone separates it from the surrounding words well enough.
+	s.Code.Prefix = ""
+	s.Code.Suffix = ""
 
 	// H1 — full-width banner (filled by fillPanels), bold and upper-cased.
 	s.H1 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{

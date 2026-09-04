@@ -17,9 +17,10 @@ shortcodes) are listed at the end and are expected to pass through literally.
 
 ## Headings
 
-The title above is H1, rendered as a full-width banner. The lines below are
-H2-H6: `mdless` prefixes each with a gutter bar and fades them from a bold
-upper-case accent (H2) down to a dim italic (H6).
+The title above is H1: a banner closed by a heavy full-width rule, so it never
+reads as just another heading. The lines below are H2-H6 — `mdless` prefixes
+each with a gutter bar and fades them from a bold upper-case accent (H2) down
+to a dim italic (H6).
 
 ### Heading level 3
 

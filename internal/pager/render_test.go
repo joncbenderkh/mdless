@@ -250,12 +250,14 @@ func TestRenderShowcase(t *testing.T) {
 			// not our padding.
 			if width >= 40 {
 				for _, ln := range strings.Split(out, "\n") {
+					plain := stripANSI(ln)
 					panel := strings.HasPrefix(ln, "\x1b[48;5;236m") ||
 						strings.HasPrefix(ln, "\x1b[48;5;254m") ||
 						strings.HasPrefix(ln, "\x1b[48;5;63m")
-					if panel && lipgloss.Width(ln) > width {
-						t.Fatalf("render(style=%s width=%d): panel line overflows (%d): %q",
-							style, width, lipgloss.Width(ln), stripANSI(ln))
+					rule := strings.Trim(plain, "─━ ") == "" && strings.TrimSpace(plain) != ""
+					if (panel || rule) && lipgloss.Width(ln) > width {
+						t.Fatalf("render(style=%s width=%d): line overflows (%d): %q",
+							style, width, lipgloss.Width(ln), plain)
 					}
 				}
 			}
