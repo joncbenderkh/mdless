@@ -18,12 +18,28 @@ const (
 )
 
 var (
-	chromeStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("237")).
-			Foreground(lipgloss.Color("252"))
 	matchCountStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
 	errorStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
 )
+
+// chrome is the header/footer bar style for the active theme.
+func (m model) chrome() lipgloss.Style {
+	th := m.env.theme
+	fg := "252"
+	if th.Foreground != "" {
+		fg = th.Foreground
+	}
+	bg := "237"
+	switch {
+	case th.ChromeBG != "":
+		bg = th.ChromeBG
+	case th.Background != "":
+		bg = th.Background
+	}
+	return lipgloss.NewStyle().
+		Foreground(lipgloss.Color(fg)).
+		Background(lipgloss.Color(bg))
+}
 
 type model struct {
 	title string
@@ -80,6 +96,11 @@ func (m *model) resize(width, height int) {
 
 	if !m.ready {
 		m.viewport = viewport.New(width, body)
+		// A theme that paints its own page also fills the viewport's slack
+		// space below a short document.
+		if bg := m.env.theme.Background; bg != "" {
+			m.viewport.Style = lipgloss.NewStyle().Background(lipgloss.Color(bg))
+		}
 	} else {
 		m.viewport.Width = width
 		m.viewport.Height = body
@@ -186,24 +207,31 @@ func fillPanels(rendered string, env renderEnv, wrap int) string {
 	}
 	codeBG := sgr(th.CodeBG, true)
 	h1BG := sgr(th.Headings[0].BG, true)
+	pageBG := sgr(th.Background, true) // "" unless the theme paints its own page
 
 	isBlank := func(s string) bool { return strings.TrimSpace(stripANSI(s)) == "" }
+
+	// paint fills a line's background to the panel width, re-asserting it after
+	// every inline reset glamour emitted. An empty bg leaves the line untouched.
+	paint := func(ln, bg string) string {
+		if bg == "" {
+			return ln
+		}
+		switch w := lipgloss.Width(ln); {
+		case w < wrap:
+			ln += strings.Repeat(" ", wrap-w)
+		case w > wrap:
+			ln = truncateVisible(ln, wrap)
+		}
+		return bg + strings.ReplaceAll(ln, ansiReset, ansiReset+bg) + ansiReset
+	}
 
 	var out []string
 	blankTail := func() bool { return len(out) == 0 || isBlank(out[len(out)-1]) }
 	edge := func() {
 		if !blankTail() {
-			out = append(out, "")
+			out = append(out, paint("", pageBG))
 		}
-	}
-	paint := func(ln, bg string) string {
-		switch w := lipgloss.Width(ln); {
-		case w < wrap:
-			ln += strings.Repeat(" ", wrap-w) // pad short lines to the panel edge
-		case w > wrap:
-			ln = truncateVisible(ln, wrap) // trim glamour's over-eager padding
-		}
-		return bg + strings.ReplaceAll(ln, ansiReset, ansiReset+bg) + ansiReset
 	}
 	flush := func(lines []string, bg string) {
 		for len(lines) > 0 && isBlank(lines[len(lines)-1]) {
@@ -234,7 +262,7 @@ func fillPanels(rendered string, env renderEnv, wrap int) string {
 			inPanel = false
 			flush(panel, panelBG)
 			if inH1 {
-				out = append(out, h1Rule)
+				out = append(out, paint(h1Rule, pageBG))
 			}
 			edge()
 		case inPanel:
@@ -242,7 +270,7 @@ func fillPanels(rendered string, env renderEnv, wrap int) string {
 		case isBlank(ln):
 			edge() // collapse blank runs outside panels
 		default:
-			out = append(out, ln)
+			out = append(out, paint(ln, pageBG))
 		}
 	}
 	return strings.TrimRight(strings.Join(out, "\n"), "\n")
@@ -358,12 +386,12 @@ func (m model) headerView() string {
 	if m.renderErr != nil {
 		title += errorStyle.Render("  (render error — showing raw source)")
 	}
-	return chromeStyle.Width(m.viewport.Width).Render(" " + title)
+	return m.chrome().Width(m.viewport.Width).Render(" " + title)
 }
 
 func (m model) footerView() string {
 	if m.searching {
-		return chromeStyle.Width(m.viewport.Width).Render("/" + m.query)
+		return m.chrome().Width(m.viewport.Width).Render("/" + m.query)
 	}
 
 	var left string
@@ -389,6 +417,6 @@ func (m model) footerView() string {
 	if gap < 1 {
 		gap = 1
 	}
-	return chromeStyle.Width(m.viewport.Width).
+	return m.chrome().Width(m.viewport.Width).
 		Render(left + strings.Repeat(" ", gap) + right)
 }

@@ -44,6 +44,15 @@ type Theme struct {
 	RuleColor    string          `json:"rule_color,omitempty"`
 	CodeBG       string          `json:"code_bg"`
 	CodeFG       string          `json:"code_fg"`
+
+	// Background and Foreground, when set, paint the whole page — so a theme
+	// works regardless of the terminal's own colours. Leave empty to sit on
+	// the terminal's background.
+	Background string `json:"background,omitempty"`
+	Foreground string `json:"foreground,omitempty"`
+	// ChromeBG tints the header/footer bars; defaults to a shade near
+	// Background, else glamour's grey.
+	ChromeBG string `json:"chrome_bg,omitempty"`
 }
 
 // Built-in themes are JSON documents in themes/, embedded at build time — the

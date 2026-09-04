@@ -18,10 +18,11 @@ shortcodes) are listed at the end and are expected to pass through literally.
 
 ## Headings
 
-The title above is H1: a banner closed by a heavy full-width rule, so it never
-reads as just another heading. The lines below are H2-H6 — `mdless` gives each
-a gutter bar that narrows with depth and steps the text down from a bold,
-underlined, bright accent (H2) to plain dim grey (H6).
+The title above is H1: a banner with a heavy full-width rule beneath it. The
+lines below are H2-H6 — a gutter bar that narrows with depth, and text that
+steps down from a bold underlined accent (H2) to plain dim grey (H6). A theme
+can paint its own page background, so `--theme light` is readable on any
+terminal.
 
 ### Heading level 3
 

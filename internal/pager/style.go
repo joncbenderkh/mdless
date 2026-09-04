@@ -49,6 +49,12 @@ func readableStyle(base ansi.StyleConfig, wrap int, th Theme) ansi.StyleConfig {
 
 	s.Heading.BlockPrefix = "\n"
 
+	// A page foreground overrides glamour's body-text colour so the theme
+	// controls contrast against its own background.
+	if th.Foreground != "" {
+		s.Document.Color = strPtr(th.Foreground)
+	}
+
 	// A rule that spans the page reads as a divider; glamour's default eight
 	// dashes read as stray text. glamour indents the rule by its two-column
 	// margin, so size it to wrap-2.

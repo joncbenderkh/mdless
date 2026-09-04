@@ -31,13 +31,16 @@
     },
     {
       "gutter": "▏ ",
-      "fg": "246"
+      "fg": "245"
     }
   ],
   "h1_rule_char": "━",
   "h1_rule_color": "25",
   "rule_char": "─",
-  "rule_color": "249",
-  "code_bg": "253",
-  "code_fg": "235"
+  "rule_color": "250",
+  "code_bg": "250",
+  "code_fg": "235",
+  "background": "255",
+  "foreground": "235",
+  "chrome_bg": "252"
 }

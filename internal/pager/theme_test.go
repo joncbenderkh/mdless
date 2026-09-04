@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -83,6 +84,38 @@ func TestThemeAppliedToHeadings(t *testing.T) {
 	}
 	if !strings.Contains(h3, "38;5;201") {
 		t.Fatalf("custom colour not applied: %q", h3)
+	}
+}
+
+// A theme background is painted onto every line so the theme is readable
+// regardless of the terminal's own colours.
+func TestThemeBackgroundPaintsEveryLine(t *testing.T) {
+	th := baseTheme()
+	th.Background = "255"
+	th.Foreground = "235"
+	env := renderEnv{style: "light", profile: termenv.ANSI256, theme: th}
+
+	out, err := render("# Title\n\nA paragraph of body text.\n\n```\ncode\n```\n\nAnother one.\n", env, 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Every line carries a background (the page's, or a panel's) — none is left
+	// showing the terminal's own colour through.
+	bg := regexp.MustCompile(`\x1b\[[0-9;]*4[08];[0-9;]+m`)
+	for _, ln := range strings.Split(out, "\n") {
+		if ln == "" {
+			continue
+		}
+		if !bg.MatchString(ln) {
+			t.Fatalf("line has no background: %q", stripANSI(ln))
+		}
+	}
+	// The plain body lines specifically get the page background.
+	pageBG := "\x1b[" + env.profile.Color("255").Sequence(true) + "m"
+	for _, ln := range strings.Split(out, "\n") {
+		if strings.Contains(stripANSI(ln), "body text") && !strings.Contains(ln, pageBG) {
+			t.Fatalf("body line not painted with the page background: %q", ln)
+		}
 	}
 }
 

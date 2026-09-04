@@ -38,9 +38,9 @@ terminal background. Built-ins:
 
 | Name | |
 | --- | --- |
-| `default` | the standard dark look |
-| `light` | for light terminals (also the auto-pick on a light background) |
-| `mono` | greyscale, no colour reliance |
+| `default` | the standard dark look, on the terminal's own background |
+| `light` | paints its own light page — readable on any terminal; the auto-pick on a light background |
+| `mono` | greyscale, for a dark background |
 
 ```
 mdless --list-themes
@@ -48,8 +48,10 @@ mdless --theme mono README.md
 ```
 
 A theme is a small JSON document controlling the heading colours and
-gutter glyphs, the horizontal-rule and H1-underline characters, and the
-code-panel colours. Start from a built-in and edit:
+gutter glyphs, the horizontal-rule and H1-underline characters, the
+code-panel colours, and optionally a `background` / `foreground` that
+paint the whole page (so the theme doesn't depend on the terminal's
+colours). Start from a built-in and edit:
 
 ```
 mdless --dump-theme default > ~/.config/mdless/mine.json
