@@ -111,20 +111,14 @@ func render(markdown string, env renderEnv, width int) (string, error) {
 }
 
 // newRenderer builds a glamour renderer with an explicit style and colour
-// profile (never autostyle), falling back to the dark style if env.style names
-// something glamour does not know.
+// profile (never autostyle). The style is a built-in one adapted by
+// readableStyle for full-screen use.
 func newRenderer(env renderEnv, wrap int) (*glamour.TermRenderer, error) {
-	opts := func(style string) []glamour.TermRendererOption {
-		return []glamour.TermRendererOption{
-			glamour.WithStandardStyle(style),
-			glamour.WithColorProfile(env.profile),
-			glamour.WithWordWrap(wrap),
-		}
-	}
-	if r, err := glamour.NewTermRenderer(opts(env.style)...); err == nil {
-		return r, nil
-	}
-	return glamour.NewTermRenderer(opts("dark")...)
+	return glamour.NewTermRenderer(
+		glamour.WithStyles(readableStyle(baseStyleConfig(env.style))),
+		glamour.WithColorProfile(env.profile),
+		glamour.WithWordWrap(wrap),
+	)
 }
 
 func (m *model) handleKey(msg tea.KeyMsg) (tea.Cmd, bool) {

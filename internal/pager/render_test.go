@@ -36,3 +36,24 @@ func TestRenderUnknownStyleFallsBack(t *testing.T) {
 		t.Fatalf("fallback render should still be styled:\n%s", out)
 	}
 }
+
+// readableStyle drops glamour's literal "## " / "### " heading markers.
+func TestRenderDropsHeadingMarkers(t *testing.T) {
+	env := renderEnv{style: "dark", profile: termenv.TrueColor}
+	md := "## Second Level\n\ntext\n\n### Third Level\n\nmore\n"
+	out, err := render(md, env, 80)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain := stripANSI(out)
+	for _, marker := range []string{"## Second", "### Third", "# "} {
+		if strings.Contains(plain, marker) {
+			t.Fatalf("heading marker %q still present:\n%s", marker, plain)
+		}
+	}
+	for _, word := range []string{"Second Level", "Third Level"} {
+		if !strings.Contains(plain, word) {
+			t.Fatalf("heading text %q missing:\n%s", word, plain)
+		}
+	}
+}
