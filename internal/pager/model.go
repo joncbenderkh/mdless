@@ -146,7 +146,9 @@ func render(markdown string, env renderEnv, width int) (string, error) {
 	// renders them 8 wide while our width maths counts them as 1, so a tabbed
 	// line overflows and wraps — showing as spurious blank rows. Expand first.
 	out = expandTabs(out, 4)
-	return strings.TrimRight(fillPanels(out, env, wrap), "\n"), nil
+	out = unorphan(out, wrap) // before fillPanels: works on plain glamour output
+	out = fillPanels(out, env, wrap)
+	return strings.TrimRight(out, "\n"), nil
 }
 
 // expandTabs replaces tab characters with spaces to the next tab stop, counting

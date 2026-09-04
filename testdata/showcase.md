@@ -163,7 +163,7 @@ def quicksort(xs):
 | -------------- | :-------: | -------------------------------------- |
 | Headings       |    yes    | H1 banner, H2-H6 gutter                |
 | Tables         |    yes    | alignment row controls each column     |
-| Footnotes      |    no     | goldmark extension not enabled         |
+| Footnotes      |    yes    | renumbered into a section at the end   |
 | Very long cell |    yes    | this cell is deliberately wide so wrapping or truncation behaviour is visible |
 
 Alignment check:
