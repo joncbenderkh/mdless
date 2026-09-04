@@ -136,6 +136,48 @@ func TestRenderCodePanels(t *testing.T) {
 	}
 }
 
+func TestExpandTabs(t *testing.T) {
+	cases := map[string]string{
+		"\tx":               "    x",
+		"a\tb":              "a   b",
+		"ab\tc":             "ab  c",
+		"abcd\te":           "abcd    e",
+		"\x1b[1m\tx\x1b[0m": "\x1b[1m    x\x1b[0m", // escape does not advance column
+		"line1\n\tline2":    "line1\n    line2",    // column resets after newline
+	}
+	for in, want := range cases {
+		if got := expandTabs(in, 4); got != want {
+			t.Errorf("expandTabs(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// A code block indented with tabs must not gain blank rows: unexpanded tabs
+// overflow the width maths and wrap in the viewport.
+func TestRenderTabbedCodeNoBlankRows(t *testing.T) {
+	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	md := "```go\nfunc f() {\n\ta := 1\n\tb := 2\n\treturn a + b\n}\n```\n"
+	out, err := render(md, env, 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "\t") {
+		t.Fatal("tab survived into rendered output")
+	}
+	inPanel := false
+	for _, ln := range strings.Split(out, "\n") {
+		switch {
+		case strings.HasPrefix(ln, "\x1b[48;5;236m"):
+			inPanel = true
+			if strings.TrimSpace(stripANSI(ln)) == "" {
+				t.Fatalf("blank row inside a tabbed code panel:\n%s", stripANSI(out))
+			}
+		case inPanel && strings.TrimSpace(stripANSI(ln)) == "":
+			inPanel = false // one trailing edge blank is fine
+		}
+	}
+}
+
 // The showcase document must render cleanly at any width — it is the manual
 // regression fixture for style changes, so a parser or style panic here should
 // fail the build.
@@ -153,6 +195,20 @@ func TestRenderShowcase(t *testing.T) {
 			}
 			if strings.TrimSpace(stripANSI(out)) == "" {
 				t.Fatalf("render(style=%s width=%d): empty output", style, width)
+			}
+			// Code panels are ours to size; at usable widths they must not
+			// overflow (a tab or missed width calc would wrap them). Below that,
+			// an unbreakable code token can overflow — that is glamour's reflow,
+			// not our padding.
+			if width >= 40 {
+				for _, ln := range strings.Split(out, "\n") {
+					panel := strings.HasPrefix(ln, "\x1b[48;5;236m") ||
+						strings.HasPrefix(ln, "\x1b[48;5;254m")
+					if panel && lipgloss.Width(ln) > width {
+						t.Fatalf("render(style=%s width=%d): panel line overflows (%d): %q",
+							style, width, lipgloss.Width(ln), stripANSI(ln))
+					}
+				}
 			}
 		}
 	}

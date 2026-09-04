@@ -109,7 +109,47 @@ func render(markdown string, env renderEnv, width int) (string, error) {
 	if err != nil {
 		return markdown, err
 	}
+	// glamour leaves tabs (common in code blocks) unexpanded. The terminal
+	// renders them 8 wide while our width maths counts them as 1, so a tabbed
+	// line overflows and wraps — showing as spurious blank rows. Expand first.
+	out = expandTabs(out, 4)
 	return strings.TrimRight(fillCodePanels(out, env, wrap), "\n"), nil
+}
+
+// expandTabs replaces tab characters with spaces to the next tab stop, counting
+// visible columns only (ANSI escape sequences do not advance the column).
+func expandTabs(s string, tabWidth int) string {
+	if !strings.Contains(s, "\t") {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s) + 16)
+	col, inEsc := 0, false
+	for _, r := range s {
+		switch {
+		case inEsc:
+			b.WriteRune(r)
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				inEsc = false
+			}
+		case r == '\x1b':
+			inEsc = true
+			b.WriteRune(r)
+		case r == '\n':
+			b.WriteRune(r)
+			col = 0
+		case r == '\t':
+			n := tabWidth - col%tabWidth
+			for i := 0; i < n; i++ {
+				b.WriteByte(' ')
+			}
+			col += n
+		default:
+			b.WriteRune(r)
+			col++
+		}
+	}
+	return b.String()
 }
 
 const ansiReset = "\x1b[0m"
@@ -139,11 +179,13 @@ func fillCodePanels(rendered string, env renderEnv, wrap int) string {
 		}
 	}
 	paint := func(ln string) string {
-		body := strings.ReplaceAll(ln, ansiReset, ansiReset+bg)
-		if gap := wrap - lipgloss.Width(ln); gap > 0 {
-			body += bg + strings.Repeat(" ", gap)
+		switch w := lipgloss.Width(ln); {
+		case w < wrap:
+			ln += strings.Repeat(" ", wrap-w) // pad short lines to the panel edge
+		case w > wrap:
+			ln = truncateVisible(ln, wrap) // trim glamour's over-eager padding
 		}
-		return bg + body + ansiReset
+		return bg + strings.ReplaceAll(ln, ansiReset, ansiReset+bg) + ansiReset
 	}
 
 	var code []string
@@ -171,6 +213,29 @@ func fillCodePanels(rendered string, env renderEnv, wrap int) string {
 		}
 	}
 	return strings.TrimRight(strings.Join(out, "\n"), "\n")
+}
+
+// truncateVisible drops visible columns past max while keeping every ANSI
+// escape sequence, so styling (and any trailing reset) survives the cut.
+func truncateVisible(s string, max int) string {
+	var b strings.Builder
+	col, inEsc := 0, false
+	for _, r := range s {
+		switch {
+		case inEsc:
+			b.WriteRune(r)
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				inEsc = false
+			}
+		case r == '\x1b':
+			inEsc = true
+			b.WriteRune(r)
+		case col < max:
+			b.WriteRune(r)
+			col++
+		}
+	}
+	return b.String()
 }
 
 func stripSentinels(s string) string {
