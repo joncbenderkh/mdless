@@ -66,8 +66,9 @@ func TestRenderDropsHeadingMarkers(t *testing.T) {
 // H1 is a full-width banner: wider and heavier than any lower level.
 func TestRenderH1Banner(t *testing.T) {
 	env := renderEnv{style: "dark", profile: termenv.ANSI256}
-	const wrap = 58
-	out, err := render("# Title Here\n\nbody\n\n## Section\n\nbody\n", env, wrap+2)
+	const width = 60
+	wrap := contentWrap(width)
+	out, err := render("# Title Here\n\nbody\n\n## Section\n\nbody\n", env, width)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,12 +122,13 @@ func TestRenderHeadingLevelsDiffer(t *testing.T) {
 // paragraph must not trigger the panel treatment.
 func TestRenderCodePanels(t *testing.T) {
 	env := renderEnv{style: "dark", profile: termenv.ANSI256}
-	const wrap = 48
+	const width = 50
+	wrap := contentWrap(width)
 	md := "A paragraph with `inline code` that should stay prose and wrap " +
 		"naturally without being widened into a panel at all.\n\n" +
 		"```\nplain block line\n```\n\n```go\nfunc x() {}\n```\n"
 
-	out, err := render(md, env, wrap+2)
+	out, err := render(md, env, width)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,6 +160,27 @@ func TestRenderCodePanels(t *testing.T) {
 	}
 	if proseInlineCode == 0 {
 		t.Fatal("did not find the inline-code prose line")
+	}
+}
+
+// A wrap width that is a multiple of three keeps glamour's reflow from wasting
+// columns and orphaning a word onto its own line.
+func TestContentWrapAvoidsOrphans(t *testing.T) {
+	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	// A paragraph whose natural break lands mid-phrase at several widths.
+	md := "The lines below fade from a bold upper-case accent at H2 all the " +
+		"way down to a dim italic at H6, one gutter bar for every level.\n"
+	for _, width := range []int{78, 79, 80, 92, 100} {
+		out, err := render(md, env, width)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, ln := range strings.Split(out, "\n") {
+			words := strings.Fields(stripANSI(ln))
+			if len(words) == 1 && !strings.HasPrefix(words[0], "─") {
+				t.Errorf("width %d: orphaned word %q", width, words[0])
+			}
+		}
 	}
 }
 

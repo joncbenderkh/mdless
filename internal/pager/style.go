@@ -3,6 +3,8 @@
 package pager
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/glamour/ansi"
 	"github.com/charmbracelet/glamour/styles"
 )
@@ -51,10 +53,14 @@ const (
 // bold-accent, accent, and three progressively dimmer plain levels. Markers are
 // a coloured gutter bar (never "## ", which reads as list markup) and every
 // heading gets a blank line above it.
-func readableStyle(base ansi.StyleConfig) ansi.StyleConfig {
+func readableStyle(base ansi.StyleConfig, wrap int) ansi.StyleConfig {
 	s := base
 
 	s.Heading.BlockPrefix = "\n"
+
+	// A rule that spans the page reads as a divider; glamour's default eight
+	// dashes read as stray text.
+	s.HorizontalRule.Format = "\n" + strings.Repeat("─", wrap) + "\n"
 
 	// H1 — full-width banner (filled by fillPanels), bold and upper-cased.
 	s.H1 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{

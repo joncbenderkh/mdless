@@ -96,11 +96,20 @@ func (m *model) resize(width, height int) {
 	m.ready = true
 }
 
-func render(markdown string, env renderEnv, width int) (string, error) {
-	wrap := width - 2
-	if wrap < 20 {
-		wrap = 20
+// contentWrap is the wrap width handed to glamour. Its reflow only ever uses a
+// width that is a multiple of three (minus its own two-column margin); a
+// non-multiple wastes up to two columns and drops the odd word onto a line of
+// its own. Rounding down to a multiple of three makes it wrap to the full width.
+func contentWrap(width int) int {
+	wrap := width - width%3
+	if wrap < 21 {
+		wrap = 21
 	}
+	return wrap
+}
+
+func render(markdown string, env renderEnv, width int) (string, error) {
+	wrap := contentWrap(width)
 	r, err := newRenderer(env, wrap)
 	if err != nil {
 		return markdown, err
@@ -262,7 +271,7 @@ func stripSentinels(s string) string {
 // readableStyle for full-screen use.
 func newRenderer(env renderEnv, wrap int) (*glamour.TermRenderer, error) {
 	return glamour.NewTermRenderer(
-		glamour.WithStyles(readableStyle(baseStyleConfig(env.style))),
+		glamour.WithStyles(readableStyle(baseStyleConfig(env.style), wrap)),
 		glamour.WithColorProfile(env.profile),
 		glamour.WithWordWrap(wrap),
 	)
