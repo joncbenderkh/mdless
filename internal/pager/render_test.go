@@ -3,6 +3,7 @@
 package pager
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -58,5 +59,27 @@ func TestRenderDropsHeadingMarkers(t *testing.T) {
 	}
 	if !strings.Contains(plain, majorGutter+"3. Third Level") {
 		t.Fatalf("H3 not rendered as %q...:\n%s", majorGutter, plain)
+	}
+}
+
+// The showcase document must render cleanly at any width — it is the manual
+// regression fixture for style changes, so a parser or style panic here should
+// fail the build.
+func TestRenderShowcase(t *testing.T) {
+	src, err := os.ReadFile("../../testdata/showcase.md")
+	if err != nil {
+		t.Fatalf("read showcase: %v", err)
+	}
+	for _, style := range []string{"dark", "light", "notty"} {
+		for _, width := range []int{20, 40, 80, 200} {
+			env := renderEnv{style: style, profile: termenv.TrueColor}
+			out, err := render(string(src), env, width)
+			if err != nil {
+				t.Fatalf("render(style=%s width=%d): %v", style, width, err)
+			}
+			if strings.TrimSpace(stripANSI(out)) == "" {
+				t.Fatalf("render(style=%s width=%d): empty output", style, width)
+			}
+		}
 	}
 }

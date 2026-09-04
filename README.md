@@ -32,6 +32,10 @@ go build -o mdless .
 go test ./...
 ```
 
+[`testdata/showcase.md`](./testdata/showcase.md) exercises every Markdown
+feature the renderer supports; run `go run . testdata/showcase.md` to eyeball
+style changes.
+
 Requires Go 1.24+. Rendering is provided by
 [`glamour`](https://github.com/charmbracelet/glamour); the interactive viewport is
 built on [`bubbletea`](https://github.com/charmbracelet/bubbletea).
