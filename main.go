@@ -30,7 +30,11 @@ Keys:
   j / k, ↓ / ↑     scroll one line          space / b   page down / up
   d / u            half page down / up      g / G       top / bottom
   /                search                   n / N       next / previous match
-  q, ctrl+c        quit
+  m                toggle mouse capture     q, ctrl+c   quit
+
+The mouse is not captured by default, so terminal click-drag selection
+(copy/paste) keeps working; the wheel still scrolls in most terminals.
+Press m to hand the mouse to the pager instead.
 `
 
 func main() {

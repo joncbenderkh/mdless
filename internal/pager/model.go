@@ -42,6 +42,8 @@ type model struct {
 	query       string
 	matches     []int
 	matchCursor int
+
+	mouseCapture bool
 }
 
 func newModel(markdown, title string, env renderEnv) model {
@@ -153,6 +155,12 @@ func (m *model) handleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.searching = true
 		m.query = ""
 		return nil, true
+	case "m":
+		m.mouseCapture = !m.mouseCapture
+		if m.mouseCapture {
+			return tea.EnableMouseCellMotion, true
+		}
+		return tea.DisableMouse, true
 	case "n":
 		m.jumpMatch(1)
 		return nil, true
@@ -201,7 +209,11 @@ func (m model) footerView() string {
 				m.query, m.matchCursor+1, len(m.matches)))
 		}
 	}
-	right := "j/k move · / search · q quit "
+	mouse := "m:select"
+	if m.mouseCapture {
+		mouse = "m:scroll"
+	}
+	right := "/ search · " + mouse + " · q quit "
 	gap := m.viewport.Width - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 1 {
 		gap = 1

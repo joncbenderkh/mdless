@@ -45,10 +45,13 @@ func Run(markdown, title string) error {
 		m.resize(w, h)
 	}
 
+	// Mouse reporting is left off so the terminal's own click-drag selection
+	// keeps working (copy/paste). Most terminals still translate the wheel
+	// into arrow keys under the alternate screen, so scrolling survives; `m`
+	// toggles app-level mouse handling for the rest.
 	p := tea.NewProgram(
 		m,
 		tea.WithAltScreen(),
-		tea.WithMouseCellMotion(),
 	)
 	_, err := p.Run()
 	return err

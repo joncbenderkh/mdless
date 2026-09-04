@@ -18,7 +18,12 @@ export PAGER=mdless
 | `j` / `k`, `↓` / `↑` | scroll a line | `space` / `b` | page down / up |
 | `d` / `u` | half page down / up | `g` / `G` | top / bottom |
 | `/` | search | `n` / `N` | next / previous match |
-| `q`, `ctrl+c` | quit | | |
+| `m` | toggle mouse capture | `q`, `ctrl+c` | quit |
+
+The mouse is **not** captured by default, so your terminal's own
+click-drag selection (copy/paste) keeps working, and the wheel still
+scrolls in terminals that map it to arrow keys under the alternate
+screen. Press `m` to give the mouse to the pager instead.
 
 ## Build
 
