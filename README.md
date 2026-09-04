@@ -1,5 +1,7 @@
 # mdless
 
+[![CI](https://github.com/joncbenderkh/mdless/actions/workflows/ci.yml/badge.svg)](https://github.com/joncbenderkh/mdless/actions/workflows/ci.yml)
+
 A `less`-style pager that renders Markdown in the terminal. Point it at a file or
 pipe Markdown into it and scroll, page, and search through the rendered output the
 way you would in `less`.
@@ -71,6 +73,9 @@ go test ./...
 [`testdata/showcase.md`](./testdata/showcase.md) exercises every Markdown
 feature the renderer supports; run `go run . testdata/showcase.md` to eyeball
 style changes.
+
+CI (`gofmt`, `go vet`, build, test) runs on every push and pull request.
+Tagging `vX.Y.Z` builds cross-platform binaries and cuts a GitHub Release.
 
 Markdown support is GFM (tables, task lists, strikethrough, autolinks) plus
 definition lists, `:emoji:` shortcodes, and footnotes (renumbered, with a

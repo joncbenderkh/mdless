@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build release artifacts
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            os="${target%/*}"; arch="${target#*/}"
+            name="mdless_${version}_${os}_${arch}"
+            bin="mdless"; [ "$os" = windows ] && bin="mdless.exe"
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+              go build -trimpath -ldflags "-s -w -X main.version=${version}" -o "dist/${bin}" .
+            if [ "$os" = windows ]; then
+              (cd dist && zip -q "${name}.zip" "${bin}" && rm "${bin}")
+            else
+              (cd dist && tar czf "${name}.tar.gz" "${bin}" && rm "${bin}")
+            fi
+          done
+          (cd dist && sha256sum mdless_* > checksums.txt)
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME"
+          dist/mdless_* dist/checksums.txt
+          --title "$GITHUB_REF_NAME" --generate-notes

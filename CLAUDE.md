@@ -43,6 +43,11 @@ go vet ./...             # vet
 gofmt -l .              # list unformatted files (should be empty)
 ```
 
+`.github/workflows/ci.yml` runs those four on every push/PR.
+`.github/workflows/release.yml` fires on a `v*` tag: cross-compiles for
+linux/darwin/windows (amd64+arm64), stamps `main.version` via `-ldflags`,
+and publishes the archives + checksums to a GitHub Release.
+
 ## Conventions
 
 - Keep the rendering and search logic pure and testable; confine terminal I/O to
