@@ -28,6 +28,7 @@ var (
 type model struct {
 	title string
 	raw   string
+	env   renderEnv
 
 	viewport  viewport.Model
 	ready     bool
@@ -43,8 +44,8 @@ type model struct {
 	matchCursor int
 }
 
-func newModel(markdown, title string) model {
-	return model{title: title, raw: markdown}
+func newModel(markdown, title string, env renderEnv) model {
+	return model{title: title, raw: markdown, env: env}
 }
 
 func (m model) Init() tea.Cmd { return nil }
@@ -82,7 +83,7 @@ func (m *model) resize(width, height int) {
 		m.viewport.Height = body
 	}
 
-	rendered, err := render(m.raw, width)
+	rendered, err := render(m.raw, m.env, width)
 	m.renderErr = err
 	m.viewport.SetContent(rendered)
 	m.plainLines = strings.Split(stripANSI(rendered), "\n")
@@ -93,15 +94,12 @@ func (m *model) resize(width, height int) {
 	m.ready = true
 }
 
-func render(markdown string, width int) (string, error) {
+func render(markdown string, env renderEnv, width int) (string, error) {
 	wrap := width - 2
 	if wrap < 20 {
 		wrap = 20
 	}
-	r, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(wrap),
-	)
+	r, err := newRenderer(env, wrap)
 	if err != nil {
 		return markdown, err
 	}
@@ -110,6 +108,23 @@ func render(markdown string, width int) (string, error) {
 		return markdown, err
 	}
 	return strings.TrimRight(out, "\n"), nil
+}
+
+// newRenderer builds a glamour renderer with an explicit style and colour
+// profile (never autostyle), falling back to the dark style if env.style names
+// something glamour does not know.
+func newRenderer(env renderEnv, wrap int) (*glamour.TermRenderer, error) {
+	opts := func(style string) []glamour.TermRendererOption {
+		return []glamour.TermRendererOption{
+			glamour.WithStandardStyle(style),
+			glamour.WithColorProfile(env.profile),
+			glamour.WithWordWrap(wrap),
+		}
+	}
+	if r, err := glamour.NewTermRenderer(opts(env.style)...); err == nil {
+		return r, nil
+	}
+	return glamour.NewTermRenderer(opts("dark")...)
 }
 
 func (m *model) handleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
@@ -123,22 +138,22 @@ func (m *model) handleKey(msg tea.KeyMsg) (tea.Cmd, bool) {
 		m.viewport.GotoBottom()
 		return nil, true
 	case "d", "ctrl+d":
-		m.viewport.HalfViewDown()
+		m.viewport.HalfPageDown()
 		return nil, true
 	case "u", "ctrl+u":
-		m.viewport.HalfViewUp()
+		m.viewport.HalfPageUp()
 		return nil, true
 	case "b", "pgup":
-		m.viewport.ViewUp()
+		m.viewport.PageUp()
 		return nil, true
 	case " ", "pgdown":
-		m.viewport.ViewDown()
+		m.viewport.PageDown()
 		return nil, true
 	case "j":
-		m.viewport.LineDown(1)
+		m.viewport.ScrollDown(1)
 		return nil, true
 	case "k":
-		m.viewport.LineUp(1)
+		m.viewport.ScrollUp(1)
 		return nil, true
 	case "/":
 		m.searching = true
@@ -178,7 +193,12 @@ func (m model) footerView() string {
 		return chromeStyle.Width(m.viewport.Width).Render("/" + m.query)
 	}
 
-	left := fmt.Sprintf(" %3.0f%%", m.viewport.ScrollPercent()*100)
+	var left string
+	if m.viewport.TotalLineCount() <= m.viewport.VisibleLineCount() {
+		left = "  All"
+	} else {
+		left = fmt.Sprintf(" %3.0f%%", m.viewport.ScrollPercent()*100)
+	}
 	if m.query != "" {
 		if len(m.matches) == 0 {
 			left += matchCountStyle.Render(fmt.Sprintf("  /%s  no matches", m.query))
