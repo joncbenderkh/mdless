@@ -25,7 +25,8 @@ internal/pager/
   model.go              bubbletea model: layout, render, key dispatch, views;
                         fillPanels post-processing (code + H1 background)
   style.go              readableStyle: glamour style + theme -> ansi.StyleConfig
-  theme.go              Theme struct, built-in themes, JSON load, DumpTheme
+  theme.go              Theme struct; loads themes/*.json (embedded), DumpTheme
+  themes/*.json         the built-in themes — same format as a user theme file
   search.go             `/` search: ANSI stripping, match indexing, scroll-to
   *_test.go             unit tests for the pure helpers
 testdata/showcase.md    every supported Markdown feature, for eyeballing
@@ -46,6 +47,7 @@ gofmt -l .              # list unformatted files (should be empty)
   `pager.go` / the `Update`/`View` methods.
 - New keybindings go in `model.handleKey`; document them in `README.md` and the
   `usage` string in `main.go`.
-- All colours and glyphs live in `theme.go`'s `Theme`; the `default` theme must
-  stay pixel-identical to the current look. Don't hard-code a colour in
-  `style.go` / `model.go` — add a `Theme` field.
+- All colours and glyphs live in a `Theme`; built-ins are `themes/*.json`, not
+  Go literals. `default` must stay pixel-identical to the current look. Don't
+  hard-code a colour in `style.go` / `model.go` — add a `Theme` field and set
+  it in every `themes/*.json`.

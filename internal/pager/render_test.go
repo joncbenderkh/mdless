@@ -15,7 +15,7 @@ import (
 // testEnv builds a renderEnv the way tests want it: the default theme, an
 // explicit style and colour profile, bypassing terminal detection.
 func testEnv(style string, profile termenv.Profile) renderEnv {
-	return renderEnv{style: style, profile: profile, theme: defaultTheme}
+	return renderEnv{style: style, profile: profile, theme: baseTheme()}
 }
 
 // With an explicit style and colour profile, headers must come back styled
@@ -62,11 +62,11 @@ func TestRenderDropsHeadingMarkers(t *testing.T) {
 		}
 	}
 	// H2: major gutter + upper-case. H3: the narrower gutter, mixed case.
-	if !strings.Contains(plain, defaultTheme.Headings[1].Gutter+"SECOND LEVEL") {
-		t.Fatalf("H2 not rendered as %q...:\n%s", defaultTheme.Headings[1].Gutter, plain)
+	if !strings.Contains(plain, baseTheme().Headings[1].Gutter+"SECOND LEVEL") {
+		t.Fatalf("H2 not rendered as %q...:\n%s", baseTheme().Headings[1].Gutter, plain)
 	}
-	if !strings.Contains(plain, defaultTheme.Headings[2].Gutter+"3. Third Level") {
-		t.Fatalf("H3 not rendered as %q...:\n%s", defaultTheme.Headings[2].Gutter, plain)
+	if !strings.Contains(plain, baseTheme().Headings[2].Gutter+"3. Third Level") {
+		t.Fatalf("H3 not rendered as %q...:\n%s", baseTheme().Headings[2].Gutter, plain)
 	}
 }
 
@@ -133,8 +133,8 @@ func TestRenderH2H3Distinct(t *testing.T) {
 	if hasAttr(h3, "1") || hasAttr(h3, "4") {
 		t.Fatalf("H3 should be neither bold nor underlined: %q", h3)
 	}
-	if !strings.Contains(stripANSI(h3), defaultTheme.Headings[2].Gutter) {
-		t.Fatalf("H3 should use the narrower gutter %q: %q", defaultTheme.Headings[2].Gutter, stripANSI(h3))
+	if !strings.Contains(stripANSI(h3), baseTheme().Headings[2].Gutter) {
+		t.Fatalf("H3 should use the narrower gutter %q: %q", baseTheme().Headings[2].Gutter, stripANSI(h3))
 	}
 }
 

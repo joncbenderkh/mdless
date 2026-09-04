@@ -1,0 +1,43 @@
+{
+  "name": "light",
+  "glamour_style": "light",
+  "headings": [
+    {
+      "gutter": "  ",
+      "fg": "231",
+      "bg": "25",
+      "bold": true,
+      "upper": true,
+      "banner": true
+    },
+    {
+      "gutter": "▌ ",
+      "fg": "18",
+      "bold": true,
+      "underline": true,
+      "upper": true
+    },
+    {
+      "gutter": "▍ ",
+      "fg": "20"
+    },
+    {
+      "gutter": "▏ ",
+      "fg": "236"
+    },
+    {
+      "gutter": "▏ ",
+      "fg": "241"
+    },
+    {
+      "gutter": "▏ ",
+      "fg": "246"
+    }
+  ],
+  "h1_rule_char": "━",
+  "h1_rule_color": "25",
+  "rule_char": "─",
+  "rule_color": "249",
+  "code_bg": "253",
+  "code_fg": "235"
+}

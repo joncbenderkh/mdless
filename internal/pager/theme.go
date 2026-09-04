@@ -3,6 +3,7 @@
 package pager
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -45,68 +46,43 @@ type Theme struct {
 	CodeFG       string          `json:"code_fg"`
 }
 
-var defaultTheme = Theme{
-	Name:         "default",
-	GlamourStyle: "dark",
-	Headings: [6]HeadingStyle{
-		{Gutter: "  ", FG: "231", BG: "63", Bold: true, Upper: true, Banner: true},
-		{Gutter: "▌ ", FG: "81", Bold: true, Upper: true, Underline: true},
-		{Gutter: "▍ ", FG: "39"},
-		{Gutter: "▏ ", FG: "250"},
-		{Gutter: "▏ ", FG: "244"},
-		{Gutter: "▏ ", FG: "238"},
-	},
-	H1RuleChar:  "━",
-	H1RuleColor: "63",
-	RuleChar:    "─",
-	RuleColor:   "240",
-	CodeBG:      "236",
-	CodeFG:      "252",
+// Built-in themes are JSON documents in themes/, embedded at build time — the
+// same format a user's own theme file uses, so each doubles as an example.
+//
+//go:embed themes/*.json
+var themeFS embed.FS
+
+var builtinThemes = loadBuiltinThemes()
+
+func loadBuiltinThemes() map[string]Theme {
+	entries, err := themeFS.ReadDir("themes")
+	if err != nil {
+		panic("mdless: embedded themes missing: " + err.Error())
+	}
+	m := make(map[string]Theme, len(entries))
+	for _, e := range entries {
+		data, err := themeFS.ReadFile("themes/" + e.Name())
+		if err != nil {
+			panic("mdless: reading embedded theme " + e.Name() + ": " + err.Error())
+		}
+		var th Theme
+		if err := json.Unmarshal(data, &th); err != nil {
+			panic("mdless: embedded theme " + e.Name() + ": " + err.Error())
+		}
+		if th.Name == "" {
+			th.Name = strings.TrimSuffix(e.Name(), ".json")
+		}
+		m[th.Name] = th
+	}
+	if _, ok := m["default"]; !ok {
+		panic("mdless: no built-in theme named \"default\"")
+	}
+	return m
 }
 
-var lightTheme = Theme{
-	Name:         "light",
-	GlamourStyle: "light",
-	Headings: [6]HeadingStyle{
-		{Gutter: "  ", FG: "231", BG: "61", Bold: true, Upper: true, Banner: true},
-		{Gutter: "▌ ", FG: "25", Bold: true, Upper: true, Underline: true},
-		{Gutter: "▍ ", FG: "24"},
-		{Gutter: "▏ ", FG: "240"},
-		{Gutter: "▏ ", FG: "244"},
-		{Gutter: "▏ ", FG: "248"},
-	},
-	H1RuleChar:  "━",
-	H1RuleColor: "61",
-	RuleChar:    "─",
-	RuleColor:   "250",
-	CodeBG:      "254",
-	CodeFG:      "236",
-}
-
-var monoTheme = Theme{
-	Name:         "mono",
-	GlamourStyle: "dark",
-	Headings: [6]HeadingStyle{
-		{Gutter: "  ", FG: "255", BG: "238", Bold: true, Upper: true, Banner: true},
-		{Gutter: "▌ ", FG: "255", Bold: true, Upper: true, Underline: true},
-		{Gutter: "▍ ", FG: "252", Bold: true},
-		{Gutter: "▏ ", FG: "250"},
-		{Gutter: "▏ ", FG: "245"},
-		{Gutter: "▏ ", FG: "240"},
-	},
-	H1RuleChar:  "━",
-	H1RuleColor: "244",
-	RuleChar:    "─",
-	RuleColor:   "240",
-	CodeBG:      "235",
-	CodeFG:      "252",
-}
-
-var builtinThemes = map[string]Theme{
-	defaultTheme.Name: defaultTheme,
-	lightTheme.Name:   lightTheme,
-	monoTheme.Name:    monoTheme,
-}
+// baseTheme is the theme scalar fields fall back to when a theme file omits
+// them, and the answer for resolveTheme("").
+func baseTheme() Theme { return builtinThemes["default"] }
 
 // ThemeNames lists the built-in themes, sorted.
 func ThemeNames() []string {
@@ -134,7 +110,7 @@ func DumpTheme(w io.Writer, name string) error {
 // JSON file, or "" for the default.
 func resolveTheme(spec string) (Theme, error) {
 	if spec == "" {
-		return defaultTheme, nil
+		return baseTheme(), nil
 	}
 	if th, ok := builtinThemes[spec]; ok {
 		return th, nil
@@ -154,11 +130,11 @@ func loadThemeFile(path string) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
-	th := defaultTheme
+	th := baseTheme()
 	if err := json.Unmarshal(data, &th); err != nil {
 		return Theme{}, fmt.Errorf("theme %s: %w", path, err)
 	}
-	if th.Name == "" || th.Name == defaultTheme.Name {
+	if th.Name == "" || th.Name == "default" {
 		th.Name = strings.TrimSuffix(filepath.Base(path), ".json")
 	}
 	return th, nil

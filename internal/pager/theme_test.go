@@ -38,7 +38,7 @@ func TestThemeFileRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if th.Headings != defaultTheme.Headings || th.CodeBG != defaultTheme.CodeBG {
+	if th.Headings != baseTheme().Headings || th.CodeBG != baseTheme().CodeBG {
 		t.Fatalf("round-tripped theme differs from default:\n%+v", th)
 	}
 	if th.Name != "t" { // name derived from the file
@@ -56,14 +56,14 @@ func TestThemeFilePartialScalars(t *testing.T) {
 	if th.CodeBG != "52" {
 		t.Fatalf("CodeBG = %q, want 52", th.CodeBG)
 	}
-	if th.Headings != defaultTheme.Headings { // absent "headings" keeps the default's
+	if th.Headings != baseTheme().Headings { // absent "headings" keeps the default's
 		t.Fatal("partial theme lost the default headings")
 	}
 }
 
 // A theme's heading colours and gutters must reach the rendered output.
 func TestThemeAppliedToHeadings(t *testing.T) {
-	th := defaultTheme
+	th := baseTheme()
 	th.Headings[2].Gutter = "» "
 	th.Headings[2].FG = "201"
 	env := renderEnv{style: "dark", profile: termenv.ANSI256, theme: th}

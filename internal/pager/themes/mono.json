@@ -1,0 +1,44 @@
+{
+  "name": "mono",
+  "glamour_style": "dark",
+  "headings": [
+    {
+      "gutter": "  ",
+      "fg": "255",
+      "bg": "238",
+      "bold": true,
+      "upper": true,
+      "banner": true
+    },
+    {
+      "gutter": "▌ ",
+      "fg": "255",
+      "bold": true,
+      "underline": true,
+      "upper": true
+    },
+    {
+      "gutter": "▍ ",
+      "fg": "252",
+      "bold": true
+    },
+    {
+      "gutter": "▏ ",
+      "fg": "250"
+    },
+    {
+      "gutter": "▏ ",
+      "fg": "245"
+    },
+    {
+      "gutter": "▏ ",
+      "fg": "240"
+    }
+  ],
+  "h1_rule_char": "━",
+  "h1_rule_color": "244",
+  "rule_char": "─",
+  "rule_color": "240",
+  "code_bg": "235",
+  "code_fg": "252"
+}
