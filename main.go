@@ -14,8 +14,9 @@ import (
 	"github.com/joncbenderkh/mdless/internal/pager"
 )
 
-// version is overridden at build time via -ldflags "-X main.version=...".
-var version = "0.1.0-dev"
+// version is the source of truth for the release; a release tag mirrors it
+// (v0.1.0). Release builds re-stamp it via -ldflags "-X main.version=...".
+var version = "0.1.0"
 
 const usage = `mdless — render Markdown in a less-style terminal pager
 
