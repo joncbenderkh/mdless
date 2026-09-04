@@ -4,6 +4,7 @@ package pager
 
 import (
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -54,12 +55,12 @@ func TestRenderDropsHeadingMarkers(t *testing.T) {
 			t.Fatalf("heading marker %q still present:\n%s", marker, plain)
 		}
 	}
-	// H2 gutter + upper-case, H3 gutter.
+	// H2: major gutter + upper-case. H3: the narrower gutter, mixed case.
 	if !strings.Contains(plain, majorGutter+"SECOND LEVEL") {
 		t.Fatalf("H2 not rendered as %q...:\n%s", majorGutter, plain)
 	}
-	if !strings.Contains(plain, majorGutter+"3. Third Level") {
-		t.Fatalf("H3 not rendered as %q...:\n%s", majorGutter, plain)
+	if !strings.Contains(plain, midGutter+"3. Third Level") {
+		t.Fatalf("H3 not rendered as %q...:\n%s", midGutter, plain)
 	}
 }
 
@@ -86,6 +87,48 @@ func TestRenderH1Banner(t *testing.T) {
 	}
 	if !strings.HasPrefix(h1, "\x1b[48;5;63m") {
 		t.Fatalf("H1 missing banner background: %q", h1)
+	}
+}
+
+// H2 and H3 must not read as near-identical: H2 is bold + underlined, H3 is not.
+func TestRenderH2H3Distinct(t *testing.T) {
+	env := renderEnv{style: "dark", profile: termenv.ANSI256}
+	out, err := render("## Section Two\n\nbody\n\n### Section Three\n\nbody\n", env, 80)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var h2, h3 string
+	for _, ln := range strings.Split(out, "\n") {
+		switch {
+		case strings.Contains(stripANSI(ln), "SECTION TWO"): // H2 is upper-cased
+			h2 = ln
+		case strings.Contains(stripANSI(ln), "Section Three"):
+			h3 = ln
+		}
+	}
+	if h2 == "" || h3 == "" {
+		t.Fatalf("missing a heading:\n%s", stripANSI(out))
+	}
+	// termenv fuses the params, e.g. "38;5;81;4;1m" — bold (1) and underline (4).
+	sgr := regexp.MustCompile(`\x1b\[([0-9;]*)m`)
+	hasAttr := func(line string, attr string) bool {
+		for _, m := range sgr.FindAllStringSubmatch(line, -1) {
+			for _, p := range strings.Split(m[1], ";") {
+				if p == attr {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	if !hasAttr(h2, "1") || !hasAttr(h2, "4") {
+		t.Fatalf("H2 should be bold (1) and underlined (4): %q", h2)
+	}
+	if hasAttr(h3, "1") || hasAttr(h3, "4") {
+		t.Fatalf("H3 should be neither bold nor underlined: %q", h3)
+	}
+	if !strings.Contains(stripANSI(h3), midGutter) {
+		t.Fatalf("H3 should use the narrower gutter %q: %q", midGutter, stripANSI(h3))
 	}
 }
 
@@ -169,7 +212,7 @@ func TestContentWrapAvoidsOrphans(t *testing.T) {
 	env := renderEnv{style: "dark", profile: termenv.ANSI256}
 	// A paragraph whose natural break lands mid-phrase at several widths.
 	md := "The lines below fade from a bold upper-case accent at H2 all the " +
-		"way down to a dim italic at H6, one gutter bar for every level.\n"
+		"way down to plain dim grey at H6, one gutter bar for every level.\n"
 	for _, width := range []int{78, 79, 80, 92, 100} {
 		out, err := render(md, env, width)
 		if err != nil {

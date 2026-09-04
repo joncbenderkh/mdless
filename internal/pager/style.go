@@ -38,6 +38,7 @@ func baseStyleConfig(name string) ansi.StyleConfig {
 // unlike glamour's default "## " / "### ", never looks like list markup.
 const (
 	majorGutter = "▌ "
+	midGutter   = "▍ "
 	minorGutter = "▏ "
 )
 
@@ -79,18 +80,22 @@ func readableStyle(base ansi.StyleConfig, wrap int) ansi.StyleConfig {
 		Bold:        boolPtr(true),
 		Upper:       boolPtr(true),
 	}}
-	// H2 — bold, upper-cased, accent colour, gutter bar.
+	// H2 — bold, upper-cased, underlined, bright accent, gutter bar.
 	s.H2 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
-		Prefix: majorGutter,
-		Bold:   boolPtr(true),
-		Upper:  boolPtr(true),
+		Prefix:    majorGutter,
+		Color:     strPtr("81"),
+		Bold:      boolPtr(true),
+		Upper:     boolPtr(true),
+		Underline: boolPtr(true),
 	}}
-	// H3 — accent colour, gutter bar, regular weight and case.
+	// H3 — accent colour, a narrower gutter, regular weight and case.
 	s.H3 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
-		Prefix: majorGutter,
+		Prefix: midGutter,
 		Bold:   boolPtr(false),
 	}}
-	// H4-H6 — no accent, same thin gutter, fading out by colour then italic.
+	// H4-H6 — no accent, thin gutter, a plain grey fading step by step. No
+	// italic or faint: terminals without real italics render it as inverse,
+	// which makes the deepest heading look the loudest.
 	s.H4 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
 		Prefix: minorGutter,
 		Bold:   boolPtr(false),
@@ -104,8 +109,7 @@ func readableStyle(base ansi.StyleConfig, wrap int) ansi.StyleConfig {
 	s.H6 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
 		Prefix: minorGutter,
 		Bold:   boolPtr(false),
-		Color:  strPtr("244"),
-		Italic: boolPtr(true),
+		Color:  strPtr("238"),
 	}}
 
 	s.CodeBlock = panelCodeBlock(s.CodeBlock)
