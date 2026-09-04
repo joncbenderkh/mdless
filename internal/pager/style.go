@@ -48,7 +48,7 @@ func readableStyle(base ansi.StyleConfig) ansi.StyleConfig {
 	}}
 	s.H3 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
 		Prefix: majorGutter,
-		Bold:   boolPtr(true),
+		Bold:   boolPtr(false),
 	}}
 	s.H4 = ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{
 		Prefix: minorGutter,
